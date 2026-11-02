@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スタディビルディング</title>
+<style>
+:root{
+  --sky1:#bfe0ff; --sky2:#f3f9ff; --ink:#14233f; --sub:#52627f; --card:#ffffffcc; --line:#9fb4d3; --ground:#46556f; --accent:#d6246e;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--sky1:#0a1230; --sky2:#1e2c5a; --ink:#e8eefb; --sub:#9db0d0; --card:#111b3acc; --line:#2d3f6b; --ground:#05080f; --accent:#ff5c9d; color-scheme:dark;}
+}
+:root[data-theme="dark"]{--sky1:#0a1230; --sky2:#1e2c5a; --ink:#e8eefb; --sub:#9db0d0; --card:#111b3acc; --line:#2d3f6b; --ground:#05080f; --accent:#ff5c9d; color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:linear-gradient(var(--sky1),var(--sky2)) fixed; color:var(--ink); font-family:"Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif; line-height:1.6; min-height:100vh}
+main{max-width:1040px; margin:0 auto; padding:24px 16px 56px}
+h1{font-size:clamp(24px,5.5vw,36px); margin:0 0 4px}
+.sub{color:var(--sub); margin:0 0 18px}
+.card{background:var(--card); border:2px solid var(--ink); border-radius:8px; padding:16px; backdrop-filter:blur(4px)}
+.city{margin-top:6px}
+.city svg{display:block; width:100%; height:min(62vh,440px)}
+.tile{fill:var(--line); opacity:.55}
+.beacon{fill:#ff3b3b}
+@media (prefers-reduced-motion:no-preference){.beacon{animation:blink 1.2s infinite}}
+@keyframes blink{50%{opacity:.15}}
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:14px 0}
+.stat small{display:block; color:var(--sub); font-size:13px}
+.stat b{font-size:20px; font-variant-numeric:tabular-nums}
+.bar{height:12px; background:var(--line); border-radius:6px; overflow:hidden}
+.bar i{display:block; height:100%; width:0; background:var(--accent)}
+.timer{text-align:center; margin-top:16px}
+.mode{font-weight:700; color:var(--sub)}
+.clock{font-size:clamp(56px,16vw,92px); font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1}
+button{font:inherit; font-weight:700; padding:10px 20px; border:2px solid var(--ink); border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; margin:4px}
+button.sec{background:transparent; color:var(--ink)}
+:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+.dev{margin-top:18px; font-size:13px; color:var(--sub); text-align:center}
+.layout{display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:16px; align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+aside h2{font-size:16px; margin:0 0 12px}
+.rows{display:grid; gap:12px}
+.row{padding-bottom:10px; border-bottom:1px solid var(--line)}
+.row small{display:block; color:var(--sub); font-size:13px}
+.row b{font-size:22px; font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main>
+  <h1>スタディビルディング</h1>
+  <p class="sub">集中した時間だけ、ビルが育ちます。</p>
+
+  <div class="layout">
+  <div>
+  <section class="card" aria-label="今の町">
+    <div class="stats">
+      <div class="stat"><small>育成中の町</small><b id="town"></b></div>
+      <div class="stat"><small>育成中のビル</small><b id="cur"></b></div>
+      <div class="stat"><small>合計集中時間</small><b id="total"></b></div>
+    </div>
+    <div class="city" id="city" role="img" aria-label="ビルが並ぶ町"></div>
+    <p class="sub" style="margin:10px 0 4px">次の階まで <span id="pct"></span></p>
+    <div class="bar"><i id="fill"></i></div>
+  </section>
+
+  <section class="card timer" aria-label="ポモドーロタイマー" style="margin-top:16px">
+    <div class="mode" id="mode"></div>
+    <div class="clock" id="clock" aria-live="off"></div>
+    <button id="start" type="button">スタート</button>
+    <button id="reset" type="button" class="sec">リセット</button>
+  </section>
+  </div>
+
+  <aside class="card" aria-label="集計">
+    <h2>集中時間の集計</h2>
+    <div class="rows">
+      <div class="row"><small>今日</small><b id="sd"></b></div>
+      <div class="row"><small>今週（月〜日）</small><b id="sw"></b></div>
+      <div class="row"><small>今月</small><b id="sm"></b></div>
+      <div class="row"><small>今年</small><b id="sy"></b></div>
+    </div>
+    <p class="sub" style="margin:12px 0 0; font-size:13px">日本時間で集計しています。</p>
+  </aside>
+  </div>
+</main>
+
+<script>
+// 合計の集中時間（分）から、町・ビルの階数・次の階までの進み具合を計算
+//   { town: 町の番号(1〜100), buildings: [10本分の階数(0〜100)], progress: 0〜1 }
+function calcTower(totalMinutes){
+  const MAX_FLOORS = 100 * 10 * 100;
+  const floors = Math.min(Math.floor(totalMinutes / 60), MAX_FLOORS);
+  const townIndex = Math.min(Math.floor(floors / 1000), 99);
+  const inTown = floors - townIndex * 1000;
+  const buildings = Array.from({ length: 10 }, (_, i) => Math.max(0, Math.min(100, inTown - i * 100)));
+  const progress = floors >= MAX_FLOORS ? 0 : (totalMinutes % 60) / 60;
+  return { town: townIndex + 1, buildings, progress };
+}
+
+// 日付ごとの記録 log（{ "2026-11-02": 75, ... }）から、今日・今週（月〜日）・今月・今年の分数を計算
+//   today は日本時間の "YYYY-MM-DD"。返す形：{ day, week, month, year }
+function summarize(log, today){
+  const [y, m, d] = today.split("-").map(Number);
+  const base = Date.UTC(y, m - 1, d);
+  const mon = base - ((new Date(base).getUTCDay() + 6) % 7) * 86400000;
+  const week = new Set(Array.from({ length: 7 }, (_, i) => new Date(mon + i * 86400000).toISOString().slice(0, 10)));
+  let day = 0, wk = 0, month = 0, year = 0;
+  for (const [k, v] of Object.entries(log)){
+    if (k === today) day += v;
+    if (week.has(k)) wk += v;
+    if (k.startsWith(today.slice(0, 7))) month += v;
+    if (k.startsWith(today.slice(0, 4))) year += v;
+  }
+  return { day, week: wk, month, year };
+}
+
+// ===== 画面とタイマー =====
+const KEY = "towerTotalMinutes", FOCUS = 25, BREAK = 5, FLOOR_PX = 2;
+const COLORS = ["#e5484d","#f76b15","#f5b800","#46a758","#12a594","#0091ff","#3e63dd","#8e4ec6","#d6409f","#a8998a"];
+const $ = id => document.getElementById(id);
+
+const START_SOUND_SRC = "start.mp3"; // 集中タイム開始時
+const END_SOUND_SRC = "end.mp3";     // 集中タイム終了時
+
+let total = load(), mode = "focus", remaining = FOCUS * 60, endAt = null, timerId = null;
+
+function load(){ try { return Math.max(0, Number(localStorage.getItem(KEY)) || 0); } catch(e){ return 0; } }
+function save(){ try { localStorage.setItem(KEY, String(total)); } catch(e){} }
+
+const LOG_KEY = "towerLog";
+function loadLog(){ try { return JSON.parse(localStorage.getItem(LOG_KEY)) || {}; } catch(e){ return {}; } }
+function saveLog(){ try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch(e){} }
+let log = loadLog();
+const todayJST = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+const fmt = m => Math.floor(m / 60) + "時間" + (m % 60) + "分";
+function renderStats(){
+  const s = summarize(log, todayJST());
+  $("sd").textContent = fmt(s.day);
+  $("sw").textContent = fmt(s.week);
+  $("sm").textContent = fmt(s.month);
+  $("sy").textContent = fmt(s.year);
+}
+
+const city = $('city');
+// 等角投影作図
+const A = 22, G = 34, OX = 60, OY = 226;
+const ORDER = [0,1,2,3,4,5,6,7,8,9].sort((p, q) => (p % 5 + Math.floor(p / 5)) - (q % 5 + Math.floor(q / 5)));
+function building(i, f, active){
+  const cx = OX + (i % 5 - Math.floor(i / 5)) * G, cy = OY + (i % 5 + Math.floor(i / 5)) * G / 2;
+  const h = f * FLOOR_PX, c = COLORS[i], a = A;
+  const L = [cx - a, cy - a / 2], B = [cx, cy], R = [cx + a, cy - a / 2], T = [cx, cy - a];
+  const P = (pts, y = 0) => pts.map(p => p[0] + ',' + (p[1] - y)).join(' ');
+  let s = `<polygon class='tile' points='${P([[L[0] - 4, L[1]], [B[0], B[1] + 4], [R[0] + 4, R[1]], [T[0], T[1] - 4]])}'/>`;
+  if (f > 0){
+    let ll = '', rl = '';
+    for (let k = 1; k < f; k++){
+      const y = k * FLOOR_PX;
+      ll += `M${L[0]} ${L[1] - y}L${B[0]} ${B[1] - y}`;
+      rl += `M${B[0]} ${B[1] - y}L${R[0]} ${R[1] - y}`;
+    }
+    const left = P([L, B]) + ' ' + P([B, L], h), right = P([B, R]) + ' ' + P([R, B], h), top = P([L, B, R, T], h);
+    s += `<polygon points='${left}' fill='${c}'/><polygon points='${left}' fill='#000' fill-opacity='.32'/>`;
+    s += `<polygon points='${right}' fill='${c}'/>`;
+    s += `<polygon points='${top}' fill='${c}'/><polygon points='${top}' fill='#fff' fill-opacity='.3'/>`;
+    s += `<path d='${ll}${rl}' stroke='#000' stroke-opacity='.3' stroke-width='.6' fill='none'/>`;
+  }
+  if (active) s += `<circle class='beacon' cx='${cx}' cy='${cy - a / 2 - h}' r='1.8'/>`;
+  return `<g><title>${f}階</title>${s}</g>`;
+}
+
+function renderTower(){
+  const t = calcTower(total);
+  const cur = Math.min(9, t.buildings.findIndex(f => f < 100) === -1 ? 9 : t.buildings.findIndex(f => f < 100));
+  city.innerHTML = `<svg viewBox='0 0 224 320' preserveAspectRatio='xMidYMax meet'>` + ORDER.map(i => building(i, t.buildings[i], i === cur)).join('') + `</svg>`;
+  $("town").textContent = t.town + "番目の町";
+  $("cur").textContent = (cur + 1) + "本目（" + t.buildings[cur] + "階）";
+  $("total").textContent = Math.floor(total / 60) + "時間" + (total % 60) + "分";
+  $("pct").textContent = Math.floor(t.progress * 100) + "%";
+  $("fill").style.width = (t.progress * 100) + "%";
+}
+
+function renderClock(){
+  const m = Math.floor(remaining / 60), s = remaining % 60;
+  const txt = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  $("clock").textContent = txt;
+  $("mode").textContent = mode === "focus" ? "集中タイム" : "休憩タイム";
+  document.title = (timerId ? txt + " ｜ " : "") + "スタディビルディング";
+}
+
+function playSound(src){
+  if (!src) return;
+  const audio = new Audio(src);
+  audio.play().catch(() => {});
+}
+
+function tick(){
+  remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+  if (remaining === 0){
+    stop();
+    if (mode === "focus"){
+      playSound(END_SOUND_SRC);
+      total += FOCUS; save(); const d = todayJST(); log[d] = (log[d] || 0) + FOCUS; saveLog(); renderTower(); renderStats();
+    }
+    mode = mode === "focus" ? "break" : "focus";
+    remaining = (mode === "focus" ? FOCUS : BREAK) * 60;
+  }
+  renderClock();
+}
+function stop(){ clearInterval(timerId); timerId = null; $("start").textContent = "スタート"; }
+
+$("start").addEventListener("click", () => {
+  if (timerId){ remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000)); stop(); renderClock(); return; }
+  if (mode === "focus") playSound(START_SOUND_SRC);
+  endAt = Date.now() + remaining * 1000;
+  timerId = setInterval(tick, 250);
+  $("start").textContent = "一時停止";
+  renderClock();
+});
+
+$("reset").addEventListener("click", () => {
+  stop();
+  mode = "focus";
+  remaining = FOCUS * 60;
+  endAt = null;
+  renderClock();
+});
+
+renderTower(); renderClock(); renderStats();
+</script>
+</body>
+</html>
