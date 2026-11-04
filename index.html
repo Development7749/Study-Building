@@ -89,10 +89,9 @@ aside h2{font-size:16px; margin:0 0 12px}
 
 <footer>このサイトはJavaScript・HTML・CSSの3つのプログラミング言語によって動作しています。</footer>
 <footer><p>開発者 : 厨房 (X : <a href = "https://x.com/Chubou_m" target = "_blank" rel = "noopener">@Chubou_m</a>)</p></footer>
-
+<footer><p>音声 : <a href = "https://soundeffect-lab.info/sound/button/" target = "_blank" rel = "noopener">効果音ラボ 様</a></p></footer>
 <script>
-// 合計の集中時間（分）から、町・ビルの階数・次の階までの進み具合を計算
-//   { town: 町の番号(1〜100), buildings: [10本分の階数(0〜100)], progress: 0〜1 }
+
 function calcTower(totalMinutes){
   const MAX_FLOORS = 100 * 10 * 100;
   const floors = Math.min(Math.floor(totalMinutes / 60), MAX_FLOORS);
@@ -103,8 +102,6 @@ function calcTower(totalMinutes){
   return { town: townIndex + 1, buildings, progress };
 }
 
-// 日付ごとの記録 log（{ "2026-11-02": 75, ... }）から、今日・今週（月〜日）・今月・今年の分数を計算
-//   today は日本時間の "YYYY-MM-DD"。返す形：{ day, week, month, year }
 function summarize(log, today){
   const [y, m, d] = today.split("-").map(Number);
   const base = Date.UTC(y, m - 1, d);
