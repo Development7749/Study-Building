@@ -178,8 +178,8 @@ function renderTower(){
   $("town").textContent = t.town + "番目の町";
   $("cur").textContent = (cur + 1) + "本目（" + t.buildings[cur] + "階）";
   $("total").textContent = Math.floor(total / 60) + "時間" + (total % 60) + "分";
-  $("pct").textContent = Math.floor(t.progress * 100) + "%";
-  $("fill").style.width = ((1 - t.progress) * 100) + "%";
+  $("pct").textContent = Math.floor((1 - t.progress) * 100) + "%";
+  $("fill").style.width = ((t.progress) * 100) + "%";
 }
 
 function renderClock(){
