@@ -98,7 +98,7 @@ function calcTower(totalMinutes){
   const townIndex = Math.min(Math.floor(floors / 1000), 99);
   const inTown = floors - townIndex * 1000;
   const buildings = Array.from({ length: 10 }, (_, i) => Math.max(0, Math.min(100, inTown - i * 100)));
-  const progress = floors >= MAX_FLOORS ? 0 : (totalMinutes % 60) / 60;
+  const progress = floors >= MAX_FLOORS ? 0 : 1 - (totalMinutes % 60) / 60;
   return { town: townIndex + 1, buildings, progress };
 }
 
@@ -178,7 +178,7 @@ function renderTower(){
   $("town").textContent = t.town + "番目の町";
   $("cur").textContent = (cur + 1) + "本目（" + t.buildings[cur] + "階）";
   $("total").textContent = Math.floor(total / 60) + "時間" + (total % 60) + "分";
-  $("pct").textContent = Math.floor((1 - t.progress) * 100) + "%";
+  $("pct").textContent = Math.floor((t.progress) * 100) + "%";
   $("fill").style.width = ((t.progress) * 100) + "%";
 }
 
