@@ -47,6 +47,17 @@ aside h2{font-size:16px; margin:0 0 12px}
 .row small{display:block; color:var(--sub); font-size:13px}
 .row b{font-size:22px; font-variant-numeric:tabular-nums}
 </style>
+
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "3054cac4-bea3-4bd0-b314-b6f8ec526b62",
+    });
+  });
+</script>
+
 </head>
 <body>
 <main>
